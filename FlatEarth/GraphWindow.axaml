@@ -1,0 +1,8 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Graph View" Width="800" Height="800" Background="DimGray">
+  <StackPanel Spacing="10" HorizontalAlignment="Center">
+    <Canvas Name="GraphCanvas" Width="400" Height="400" />
+    <!--<Button Content="Back" HorizontalAlignment="Center" Click="BackButton_Click"/>-->
+  </StackPanel>
+</Window>

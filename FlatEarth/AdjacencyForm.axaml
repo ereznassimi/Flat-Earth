@@ -1,0 +1,29 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="FlatEarth.AdjacencyForm"
+        Title="Adjacency Matrix"
+        Width="1200" Height="800">
+
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <!-- Scrollable DataGrid area -->
+    <DataGrid x:Name="AdjacencyGrid"
+              Grid.Row="0"
+              AutoGenerateColumns="False"
+              HeadersVisibility="All"
+              CanUserResizeColumns="False"
+              CanUserSortColumns="False"
+              GridLinesVisibility="All"
+              RowHeight="58"/>
+
+    <!-- Bottom Buttons -->
+    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="10">
+      <Button x:Name="BackButton" Content="Back" Width="80" Margin="5"/>
+      <Button x:Name="DrawButton" Content="Draw" Width="80" Margin="5"/>
+    </StackPanel>
+  </Grid>
+</Window>
