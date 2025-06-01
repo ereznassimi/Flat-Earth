@@ -9,26 +9,27 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
+
 namespace FlatEarth;
 
-public partial class AdjacencyForm : Window
+public partial class AdjacencyForm: Window
 {
-    private DataGrid adjacencyGrid;
-    private ObservableCollection<LocationNeighbor> locationNeighbors { get; set; }
-    private int[,] adjacencyMatrix;
+    private DataGrid AdjacencyGrid;
+    private ObservableCollection<LocationNeighbor> LocationNeighbors { get; set; }
+    private int[,] AdjacencyMatrix;
 
-    public AdjacencyForm() : this(new List<Location>()) { }
+    public AdjacencyForm(): this(new List<Location>()) { }
 
     public AdjacencyForm(List<Location> selectedLocations)
     {
         InitializeComponent();
 
-        locationNeighbors = new ObservableCollection<LocationNeighbor>();
-        adjacencyMatrix = new int[selectedLocations.Count, selectedLocations.Count];
+        this.LocationNeighbors = new ObservableCollection<LocationNeighbor>();
+        this.AdjacencyMatrix = new int[selectedLocations.Count, selectedLocations.Count];
 
-        for (int i = 0; i < selectedLocations.Count; i++)
+        for (int i = 0; i < selectedLocations.Count; ++i)
         {
-            locationNeighbors.Add(new LocationNeighbor(selectedLocations.Count)
+            this.LocationNeighbors.Add(new LocationNeighbor(selectedLocations.Count)
             {
                 Index = i,
                 Number = i + 1,
@@ -36,44 +37,43 @@ public partial class AdjacencyForm : Window
             });
         }
 
-        DataContext = this;
-        if (adjacencyGrid != null)
+        this.DataContext = this;
+        if (this.AdjacencyGrid != null)
         {
-            adjacencyGrid.ItemsSource = locationNeighbors;
-            adjacencyGrid.CurrentCellChanged += AdjacencyGrid_CurrentCellChanged;
+            this.AdjacencyGrid.ItemsSource = this.LocationNeighbors;
+            this.AdjacencyGrid.CurrentCellChanged += AdjacencyGrid_CurrentCellChanged;
         }
 
-        GenerateMatrixGrid(selectedLocations.Count);
+        this.GenerateMatrixGrid(selectedLocations.Count);
     }
 
     private void InitializeComponent()
     {
         AvaloniaXamlLoader.Load(this);
-        adjacencyGrid = this.FindControl<DataGrid>("AdjacencyGrid");
+        this.AdjacencyGrid = this.FindControl<DataGrid>("CheckboxesGrid");
         this.FindControl<Button>("BackButton").Click += OnBackButtonClick;
         this.FindControl<Button>("DrawButton").Click += OnDrawButtonClick;
     }
 
     private void AdjacencyGrid_CurrentCellChanged(object? sender, EventArgs e)
     {
-        if (adjacencyGrid.CurrentColumn is DataGridColumn column &&
-            adjacencyGrid.SelectedItem is LocationNeighbor selectedRow)
+        if (this.AdjacencyGrid.CurrentColumn is DataGridColumn column &&
+            this.AdjacencyGrid.SelectedItem is LocationNeighbor selectedRow)
         {
-            int rowIndex = locationNeighbors.IndexOf(selectedRow);
-            int columnIndex = adjacencyGrid.Columns.IndexOf(column) - 1; // offset by 1 due to label column
+            int rowIndex = this.LocationNeighbors.IndexOf(selectedRow);
+            int columnIndex = this.AdjacencyGrid.Columns.IndexOf(column) - 1; // offset by 1 due to label column
 
             if (columnIndex >= 0 && rowIndex == columnIndex)
             {
                 selectedRow.Neighbors[columnIndex] = false;
-                adjacencyGrid.ItemsSource = null;
-                adjacencyGrid.ItemsSource = locationNeighbors;
+                this.AdjacencyGrid.ItemsSource = this.LocationNeighbors;
             }
         }
     }
 
     private void GenerateMatrixGrid(int size)
     {
-        adjacencyGrid.Columns.Clear();
+        this.AdjacencyGrid.Columns.Clear();
 
         // First column for row labels
         DataGridTemplateColumn labelColumn = new DataGridTemplateColumn
@@ -82,54 +82,53 @@ public partial class AdjacencyForm : Window
             Width = new DataGridLength(200), // Fixed or max width for wrapping
             CellTemplate = new FuncDataTemplate<LocationNeighbor>((row, _) =>
             {
-                var numberText = new TextBlock
+                TextBlock numberText = new TextBlock
                 {
                     Text = row.Number.ToString(),
-                    FontWeight = Avalonia.Media.FontWeight.Bold,
+                    FontWeight = FontWeight.Bold,
                     Margin = new Thickness(5, 0, 5, 0),
-                    VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+                    VerticalAlignment = VerticalAlignment.Center
                 };
 
-                var nameText = new TextBlock
+                TextBlock nameText = new TextBlock
                 {
                     Text = row.Name,
                     TextWrapping = TextWrapping.Wrap,
                     MaxWidth = 150,
-                    VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+                    VerticalAlignment = VerticalAlignment.Center
                 };
 
-                var textPanel = new StackPanel
+                StackPanel textPanel = new StackPanel
                 {
                     Orientation = Orientation.Horizontal,
-                    VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center,
                     Children = { numberText, nameText }
                 };
 
                 return new Grid
                 {
-                    VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center,
                     Children = { textPanel }
                 };
             })
         };
-        adjacencyGrid.Columns.Add(labelColumn);
-
+        this.AdjacencyGrid.Columns.Add(labelColumn);
 
         for (int i = 0; i < size; i++)
         {
-            int columnIndex = i; // capture loop var
-            var column = new DataGridTemplateColumn
+            int columnIndex = i;
+            DataGridTemplateColumn column = new DataGridTemplateColumn
             {
                 Header = (i + 1).ToString(),
                 CellTemplate = new FuncDataTemplate<LocationNeighbor>((row, _) =>
                 {
                     int rowIndex = row.Index;
 
-                    var checkBox = new CheckBox
+                    CheckBox checkBox = new CheckBox
                     {
                         IsChecked = row.Neighbors[columnIndex],
-                        HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
-                        VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        VerticalAlignment = VerticalAlignment.Center
                     };
 
                     checkBox.Click += (s, e) =>
@@ -148,27 +147,27 @@ public partial class AdjacencyForm : Window
                 })
             };
 
-            adjacencyGrid.Columns.Add(column);
+            this.AdjacencyGrid.Columns.Add(column);
         }
     }
 
     private void OnBackButtonClick(object sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        Close();
+        this.Close();
     }
 
     private void OnDrawButtonClick(object sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        for (int i = 0; i < locationNeighbors.Count; i++)
+        for (int i = 0; i < this.LocationNeighbors.Count; i++)
         {
-            LocationNeighbor neighbor = locationNeighbors[i];
+            LocationNeighbor neighbor = this.LocationNeighbors[i];
             for (int j = 0; j < neighbor.Neighbors.Count; j++)
             {
-                adjacencyMatrix[i, j] = neighbor.Neighbors[j] ? 1 : 0;
+                this.AdjacencyMatrix[i, j] = neighbor.Neighbors[j] ? 1 : 0;
             }
         }
 
-        GraphWindow graphWindow = new GraphWindow(adjacencyMatrix);
+        GraphWindow graphWindow = new GraphWindow(this.AdjacencyMatrix);
         graphWindow.ShowDialog(this);
     }
 }

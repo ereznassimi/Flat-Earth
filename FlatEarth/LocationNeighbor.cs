@@ -4,7 +4,6 @@ using System.ComponentModel;
 
 namespace FlatEarth;
 
-
 public class LocationNeighbor: INotifyPropertyChanged
 {
     public int Index { get; set; }

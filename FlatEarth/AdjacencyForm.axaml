@@ -11,7 +11,7 @@
     </Grid.RowDefinitions>
 
     <!-- Scrollable DataGrid area -->
-    <DataGrid x:Name="AdjacencyGrid"
+    <DataGrid x:Name="CheckboxesGrid"
               Grid.Row="0"
               AutoGenerateColumns="False"
               HeadersVisibility="All"

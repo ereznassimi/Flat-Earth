@@ -10,7 +10,7 @@ public class DelegateCommand: ICommand
 
     public DelegateCommand(Action<object?> command)
     {
-        Command = command;
+        this.Command = command;
     }
 
     public bool CanExecute(object? parameter) => true;

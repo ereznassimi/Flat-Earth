@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 
 namespace FlatEarth;
-
 
 public static class GraphAlgorithms
 {
@@ -34,7 +34,9 @@ public static class GraphAlgorithms
 
                 int expected = fullReachability[i].Count;
                 if (fullReachability[i].Contains(remove))
+                {
                     expected -= 1;
+                }
 
                 if (reachable.Count < expected)
                 {
@@ -156,9 +158,18 @@ public static class GraphAlgorithms
         {
             for (int j = 0; j < n; j++)
             {
-                if (i == j) dist[i, j] = 0;
-                else if (adjacencyMatrix[i, j] == 1) dist[i, j] = 1;
-                else dist[i, j] = INF;
+                if (i == j)
+                {
+                    dist[i, j] = 0;
+                }
+                else if (adjacencyMatrix[i, j] == 1)
+                {
+                    dist[i, j] = 1;
+                }
+                else
+                {
+                    dist[i, j] = INF;
+                }
             }
         }
 
@@ -170,7 +181,9 @@ public static class GraphAlgorithms
                 for (int j = 0; j < n; j++)
                 {
                     if (dist[i, k] + dist[k, j] < dist[i, j])
+                    {
                         dist[i, j] = dist[i, k] + dist[k, j];
+                    }
                 }
             }
         }
@@ -255,5 +268,53 @@ public static class GraphAlgorithms
         }
 
         return positions;
+    }
+
+    public static List<List<int>> GetAllPaths(int[,] adjacencyMatrix, int n, int? startNode = null)
+    {
+        List<List<int>> allPaths = new List<List<int>>();
+
+        IEnumerable<int> startPoints = startNode.HasValue ?
+            new[] { startNode.Value } :
+            Enumerable.Range(0, n);
+
+        foreach (int start in startPoints)
+        {
+            bool[] visited = new bool[n];
+            List<int> currentPath = new List<int>();
+            DFS(adjacencyMatrix, n, start, visited, currentPath, allPaths);
+        }
+
+        return allPaths;
+    }
+
+    private static void DFS(
+        int[,] adjacencyMatrix,
+        int n,
+        int currentNode,
+        bool[] visited,
+        List<int> currentPath,
+        List<List<int>> allPaths)
+    {
+        visited[currentNode] = true;
+        currentPath.Add(currentNode);
+
+        if (currentPath.Count == n)
+        {
+            allPaths.Add(new List<int>(currentPath));
+        }
+        else
+        {
+            for (int next = 0; next < n; next++)
+            {
+                if (adjacencyMatrix[currentNode, next] == 1 && !visited[next])
+                {
+                    DFS(adjacencyMatrix, n, next, visited, currentPath, allPaths);
+                }
+            }
+        }
+
+        visited[currentNode] = false;
+        currentPath.RemoveAt(currentPath.Count - 1);
     }
 }

@@ -7,7 +7,6 @@ using System.Linq;
 
 namespace FlatEarth;
 
-
 public partial class MainWindow: Window
 {
     public ObservableCollection<Location> Locations { get; set; } = new();

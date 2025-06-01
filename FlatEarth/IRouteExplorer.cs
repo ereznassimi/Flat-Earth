@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace FlatEarth;
 
+namespace FlatEarth;
 
 public interface IRouteExplorer
 {

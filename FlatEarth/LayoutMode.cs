@@ -1,10 +1,9 @@
 ﻿
-namespace FlatEarth
+namespace FlatEarth;
+
+public enum LayoutMode
 {
-    public enum LayoutMode
-    {
-        Ellipse,
-        KamadaKawai,
-        ForceDirected
-    }
+    Ellipse,
+    KamadaKawai,
+    ForceDirected
 }

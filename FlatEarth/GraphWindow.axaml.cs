@@ -5,16 +5,17 @@ using Avalonia.Controls.Shapes;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Google.OrTools.ConstraintSolver;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 
 namespace FlatEarth;
 
-
-public class GraphWindow : Window
+public class GraphWindow: Window
 {
     #region Members
 
@@ -33,6 +34,21 @@ public class GraphWindow : Window
     private List<DrawableEdge> DrawableEdges = new List<DrawableEdge>();
 
     private LayoutMode CurrentLayoutMode = LayoutMode.Ellipse;
+
+    private List<List<int>> AllPaths;
+
+    private int CurrentPathIndex = 0;
+    private int TotalPaths = 0;
+
+    private TextBox PathNumberBox;
+    private TextBlock TotalPathTextBlock;
+    private Button FastBackButton;
+    private Button BackButton;
+    private Button ForwardButton;
+    private Button FastForwardButton;
+    private StackPanel PathNavigationPanel;
+
+    private ContextMenu SharedContextMenu = new ContextMenu();
 
     #endregion
 
@@ -112,7 +128,7 @@ public class GraphWindow : Window
                     Stroke = color,
                     StrokeThickness = 3,
                     StrokeDashArray = (dashPattern != null) ?
-                        new Avalonia.Collections.AvaloniaList<double>(dashPattern) : null
+                        new AvaloniaList<double>(dashPattern) : null
                 }
             }
         };
@@ -157,7 +173,7 @@ public class GraphWindow : Window
         {
             Orientation = Orientation.Vertical,
             Spacing = 12,
-            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top
+            VerticalAlignment = VerticalAlignment.Top
         };
 
         contentPanel.Children.Add(new TextBlock
@@ -258,7 +274,124 @@ public class GraphWindow : Window
         radioPanel.Children.Add(forceDirectedRadio);
         contentPanel.Children.Add(radioPanel);
 
-        // Add the stack panel to the dock panel
+        contentPanel.Children.Add(new Separator());
+
+        this.PathNavigationPanel = new StackPanel
+        {
+            Orientation = Orientation.Vertical,
+            Margin = new Thickness(10),
+            IsEnabled = false
+        };
+
+        TextBlock titleTextBlock = new TextBlock
+        {
+            Text = "All Paths",
+            FontSize = 16,
+            FontWeight = FontWeight.Bold,
+            Margin = new Thickness(0, 0, 0, 5)
+        };
+
+        StackPanel navPanel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 5
+        };
+
+        this.FastBackButton = new Button
+        {
+            Height = 40,
+            Width = 30,
+            Content = new Image
+            {
+                Source = new Bitmap("8665026_backward_fast_icon.png"),
+                Width = 24,
+                Height = 24
+            }
+        };
+        this.FastBackButton.Click += (_, _) => this.GoToPath(0);
+
+        this.BackButton = new Button
+        {
+            Height = 40,
+            Width = 30,
+            Content = new Image
+            {
+                Source = new Bitmap("8664982_backward_step_icon.png"),
+                Width = 24,
+                Height = 24
+            }
+        };
+        this.BackButton.Click += (_, _) => this.GoToPath(this.CurrentPathIndex - 1);
+
+        this.PathNumberBox = new TextBox
+        {
+            Width = 50,
+            HorizontalContentAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            Text = "1"
+        };
+        this.PathNumberBox.KeyDown += (s, e) =>
+        {
+            if (e.Key == Key.Enter)
+            {
+                if (int.TryParse(this.PathNumberBox.Text, out int val))
+                {
+                    this.GoToPath(val - 1);
+                }
+            }
+        };
+        this.PathNumberBox.LostFocus += (s, e) =>
+        {
+            if (int.TryParse(this.PathNumberBox.Text, out int val))
+            {
+                this.GoToPath(val - 1);
+            }
+        };
+
+        this.ForwardButton = new Button
+        {
+            Height = 40,
+            Width = 30,
+            Content = new Image
+            {
+                Source = new Bitmap("8665527_forward_step_icon.png"),
+                Width = 24,
+                Height = 24
+            }
+        };
+        this.ForwardButton.Click += (_, _) => this.GoToPath(this.CurrentPathIndex + 1);
+
+        this.FastForwardButton = new Button
+        {
+            Height = 40,
+            Width = 30,
+            Content = new Image
+            {
+                Source = new Bitmap("8541927_fast_forward_icon.png"),
+                Width = 24,
+                Height = 24
+            }
+        };
+        this.FastForwardButton.Click += (_, _) => this.GoToPath(this.AllPaths.Count - 1);
+
+        this.TotalPathTextBlock = new TextBlock
+        {
+            Text = "/ 0",
+            VerticalAlignment = VerticalAlignment.Center
+        };
+
+        navPanel.Children.Add(this.FastBackButton);
+        navPanel.Children.Add(this.BackButton);
+        navPanel.Children.Add(this.PathNumberBox);
+        navPanel.Children.Add(this.TotalPathTextBlock);
+        navPanel.Children.Add(this.ForwardButton);
+        navPanel.Children.Add(this.FastForwardButton);
+
+        this.PathNavigationPanel.Children.Add(titleTextBlock);
+        this.PathNavigationPanel.Children.Add(navPanel);
+
+        contentPanel.Children.Add(this.PathNavigationPanel);
+
         legendPanel.Children.Add(contentPanel);
 
         Grid.SetColumn(legendPanel, 0);
@@ -308,7 +441,7 @@ public class GraphWindow : Window
         return foundNode;
     }
 
-    private bool CannotCoverAllNodes()
+    private bool CanCoverAllNodes()
     {
         int zeroInCount = this.DrawableNodes.Count(node => node.IsZeroInDegree);
         int zeroOutCount = this.DrawableNodes.Count(node => node.IsDeadEnd);
@@ -321,10 +454,10 @@ public class GraphWindow : Window
                     "Please ensure at most one start node (zero in-degree)\n" +
                     "and one end node (zero out-degree).");
 
-            return true;
+            return false;
         }
 
-        return false;
+        return true;
     }
 
     private long[,] ConvertToDistanceMatrix(int[,] locationNeighbors)
@@ -364,6 +497,50 @@ public class GraphWindow : Window
         }
 
         return true;
+    }
+
+    private bool AreValidRoutes(IEnumerable<IEnumerable<int>> routes)
+    {
+        if ((routes == null) || (routes.Count() == 0))
+        {
+            this.MessageBox(
+                "Error",
+                "Impossible to cover all nodes!");
+
+            return false;
+        }
+
+        foreach (IEnumerable<int> route in routes)
+        {
+            if (!this.IsValidRoute(route))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private void ConvertZeroInNode(int nodeIndex)
+    {
+        if (this.DrawableNodes[nodeIndex].IsZeroInDegree)
+        {
+            for (int k = 0; k < this.NodeCount; k++)
+            {
+                if (this.LocationNeighbors[nodeIndex, k] == 1)
+                {
+                    this.LocationNeighbors[k, nodeIndex] = 1;
+                }
+            }
+        }
+    }
+
+    private void ConvertZeroInNodes()
+    {
+        for (int i = 0; i < this.NodeCount; ++i)
+        {
+            this.ConvertZeroInNode(i);
+        }
     }
 
     #endregion
@@ -502,7 +679,7 @@ public class GraphWindow : Window
 
     private (double X, double Y)[] PositionsByKamadaKawai()
     {
-        double[,] shortestPaths = GraphAlgorithms.ComputeShortestPaths(LocationNeighbors);
+        double[,] shortestPaths = GraphAlgorithms.ComputeShortestPaths(this.LocationNeighbors);
 
         double width = GraphCanvas.Bounds.Width;
         double height = GraphCanvas.Bounds.Height;
@@ -565,7 +742,8 @@ public class GraphWindow : Window
                 disp[i] = (0, 0);
                 for (int j = 0; j < NodeCount; j++)
                 {
-                    if (i == j) continue;
+                    if (i == j)
+                        continue;
 
                     double dx = positions[i].X - positions[j].X;
                     double dy = positions[i].Y - positions[j].Y;
@@ -582,7 +760,7 @@ public class GraphWindow : Window
             {
                 for (int j = 0; j < NodeCount; j++)
                 {
-                    if (LocationNeighbors[i, j] == 1 || LocationNeighbors[j, i] == 1)
+                    if (this.LocationNeighbors[i, j] == 1 || this.LocationNeighbors[j, i] == 1)
                     {
                         double dx = positions[i].X - positions[j].X;
                         double dy = positions[i].Y - positions[j].Y;
@@ -690,12 +868,10 @@ public class GraphWindow : Window
         }
     }
 
-    private async void ShowRouteFromNode(int depotIndex)
+    private async void ShowBestRouteFromNode(int depotIndex)
     {
-        if (this.CannotCoverAllNodes())
+        if (!this.CanCoverAllNodes())
             return;
-
-        //await this.MessageBox("Info", $"Finding route from node: {depotIndex + 1}");
 
         long[,] distanceMatrix = this.ConvertToDistanceMatrix(this.LocationNeighbors);
         IEnumerable<int> route =
@@ -705,6 +881,44 @@ public class GraphWindow : Window
             return;
 
         this.DrawableEdges.Clear();
+        foreach (var (from, to) in route.Zip(route.Skip(1)))
+            this.ClassifyEdge(from, to);
+
+        this.DrawNodesAndEdges();
+    }
+
+    private async void ShowAllRoutes(int? depotIndex = null)
+    {
+        if (!this.CanCoverAllNodes())
+            return;
+
+        this.AllPaths = GraphAlgorithms.GetAllPaths(
+            this.LocationNeighbors,
+            this.NodeCount,
+            depotIndex);
+
+        if (!this.AreValidRoutes(this.AllPaths))
+            return;
+
+        this.TotalPaths = this.AllPaths.Count;
+        this.TotalPathTextBlock.Text = $"/ {this.TotalPaths}";
+        this.PathNavigationPanel.IsEnabled = this.TotalPaths > 0;
+
+        this.GoToPath(0);
+    }
+
+    private void GoToPath(int newIndex)
+    {
+        if (this.TotalPaths == 0)
+            return;
+
+        newIndex = Math.Clamp(newIndex, 0, this.TotalPaths - 1);
+        this.CurrentPathIndex = newIndex;
+
+        this.PathNumberBox.Text = (this.CurrentPathIndex + 1).ToString();
+
+        this.DrawableEdges.Clear();
+        IEnumerable<int> route = this.AllPaths[this.CurrentPathIndex];
         foreach (var (from, to) in route.Zip(route.Skip(1)))
             this.ClassifyEdge(from, to);
 
@@ -722,9 +936,6 @@ public class GraphWindow : Window
             return;
 
         Point point = e.GetPosition(GraphCanvas);
-        int depotIndex;
-        if (!this.TryFindNode(point, out depotIndex))
-            return;
 
         Border anchor = new Border
         {
@@ -737,19 +948,64 @@ public class GraphWindow : Window
         Canvas.SetTop(anchor, point.Y);
         GraphCanvas.Children.Add(anchor); // Add it temporarily
 
-        ContextMenu contextMenu = new ContextMenu();
-
-        // Add items to the existing Items collection (do NOT assign a new one)
-        contextMenu.Items.Add(new MenuItem
+        if (this.SharedContextMenu.IsOpen)
         {
-            Header = $"Show Route from {depotIndex + 1}",
-            Command = new DelegateCommand(_ => this.ShowRouteFromNode(depotIndex))
-        });
+            this.SharedContextMenu.Close();
+        }
 
-        contextMenu.PlacementTarget = anchor;
-        contextMenu.PlacementMode = PlacementMode.Pointer;
-        contextMenu.Closed += (_, __) => GraphCanvas.Children.Remove(anchor);
-        contextMenu.Open(anchor);
+        this.SharedContextMenu.Items.Clear();
+
+        int depotIndex;
+        if (this.TryFindNode(point, out depotIndex))
+        {
+            //this.SharedContextMenu.Items.Add(new MenuItem
+            //{
+            //    Header = $"Best Route from {depotIndex + 1}",
+            //    Command = new DelegateCommand(_ =>
+            //        this.ShowBestRouteFromNode(depotIndex))
+            //});
+
+            this.SharedContextMenu.Items.Add(new MenuItem
+            {
+                Header = $"All Routes from {depotIndex + 1}",
+                Command = new DelegateCommand(_ => this.ShowAllRoutes(depotIndex))
+            });
+
+            this.SharedContextMenu.Items.Add(new MenuItem
+            {
+                Header = $"Convert zero-in node {depotIndex + 1}",
+                Command = new DelegateCommand(_ =>
+                {
+                    this.ConvertZeroInNode(depotIndex);
+                    this.RecomputeLayout();
+                })
+            });
+        }
+        else
+        {
+            this.SharedContextMenu.Items.Add(new MenuItem
+            {
+                Header = "All Possible Routes",
+                Command = new DelegateCommand(_ => this.ShowAllRoutes())
+            });
+
+            this.SharedContextMenu.Items.Add(new MenuItem
+            {
+                Header = "Convert zero-in nodes",
+                Command = new DelegateCommand(_ =>
+                {
+                    this.ConvertZeroInNodes();
+                    this.RecomputeLayout();
+                })
+            });
+        }
+
+        this.SharedContextMenu.PlacementTarget = anchor;
+        this.SharedContextMenu.PlacementMode = PlacementMode.Pointer;
+        this.SharedContextMenu.Closed += (_, __) => GraphCanvas.Children.Remove(anchor);
+
+        await Task.Delay(1);
+        this.SharedContextMenu.Open(anchor);
     }
 
     #endregion

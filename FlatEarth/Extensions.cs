@@ -3,8 +3,8 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using System.Threading.Tasks;
 
-namespace FlatEarth;
 
+namespace FlatEarth;
 
 public static class Extensions
 {
