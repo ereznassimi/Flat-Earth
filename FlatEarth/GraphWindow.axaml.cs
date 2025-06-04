@@ -971,15 +971,18 @@ public class GraphWindow: Window
                 Command = new DelegateCommand(_ => this.ShowAllRoutes(depotIndex))
             });
 
-            this.SharedContextMenu.Items.Add(new MenuItem
+            if (this.DrawableNodes[depotIndex].IsZeroInDegree)
             {
-                Header = $"Convert zero-in node {depotIndex + 1}",
-                Command = new DelegateCommand(_ =>
+                this.SharedContextMenu.Items.Add(new MenuItem
                 {
-                    this.ConvertZeroInNode(depotIndex);
-                    this.RecomputeLayout();
-                })
-            });
+                    Header = $"Convert zero-in node {depotIndex + 1}",
+                    Command = new DelegateCommand(_ =>
+                    {
+                        this.ConvertZeroInNode(depotIndex);
+                        this.RecomputeLayout();
+                    })
+                });
+            }
         }
         else
         {
